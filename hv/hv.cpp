@@ -13,6 +13,7 @@ extern "C" {
 // since we never call these functions anyways
 NTKERNELAPI void PsGetCurrentThreadProcess();
 NTKERNELAPI void PsGetProcessImageFileName();
+NTKERNELAPI void PsGetProcessSectionBaseAddress();
 
 }
 
@@ -64,6 +65,25 @@ static bool find_offsets() {
 
   DbgPrint("[hv] EPROCESS::ImageFileName offset = 0x%zX.\n",
     ghv.eprocess_image_file_name);
+
+  auto const ps_get_process_section_base_address = 
+    reinterpret_cast<uint8_t*>(PsGetProcessSectionBaseAddress);
+
+  // mov rax, [rcx + OFFSET]
+  // retn
+  if (ps_get_process_section_base_address[0] != 0x48 ||
+    ps_get_process_section_base_address[1] != 0x8B ||
+    ps_get_process_section_base_address[2] != 0x81 ||
+    ps_get_process_section_base_address[7] != 0xC3) {
+    DbgPrint("[hv] Failed to get EPROCESS::SectionBaseAddress offset.\n");
+    return false;
+  }
+
+  ghv.eprocess_section_base_address_offset =
+    *reinterpret_cast<uint32_t*>(ps_get_process_section_base_address + 3);
+
+  DbgPrint("[hv] EPROCESS::SectionBaseAddress offset = 0x%zX.\n",
+    ghv.eprocess_section_base_address_offset);
 
   auto const ps_get_current_thread_process =
     reinterpret_cast<uint8_t*>(PsGetCurrentThreadProcess);

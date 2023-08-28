@@ -11,6 +11,38 @@ extern "C" uint8_t __ImageBase;
 
 namespace hv::hc {
 
+// Function to iterate over EPROCESS entries and perform a callback for each matching process
+template <typename ProcessCallback>
+void iterate_eprocess_entries(uint64_t target_pid, ProcessCallback callback) {
+  // ActiveProcessLinks is right after UniqueProcessId in memory
+  auto const apl_offset = ghv.eprocess_unique_process_id_offset + 8;
+  auto const head = ghv.system_eprocess + apl_offset;
+  auto curr_entry = head;
+
+  // iterate over every EPROCESS in the APL linked list
+  do {
+    // get the next entry in the linked list
+    if (sizeof(curr_entry) != read_guest_virtual_memory(ghv.system_cr3,
+      curr_entry + offsetof(LIST_ENTRY, Flink), &curr_entry, sizeof(curr_entry)))
+      break;
+
+    // EPROCESS
+    auto const process = curr_entry - apl_offset;
+
+    // EPROCESS::UniqueProcessId
+    uint64_t pid = 0;
+    if (sizeof(pid) != read_guest_virtual_memory(ghv.system_cr3,
+      process + ghv.eprocess_unique_process_id_offset, &pid, sizeof(pid)))
+      break;
+
+    // we found the target process
+    if (target_pid == pid) {
+      callback(process);
+      break;
+    }
+  } while (curr_entry != head);
+}
+
 // ping the hypervisor to make sure it is running
 void ping(vcpu* const cpu) {
   cpu->ctx->rax = hypervisor_signature;
@@ -275,39 +307,15 @@ void query_process_cr3(vcpu* const cpu) {
 
   cpu->ctx->rax = 0;
 
-  // ActiveProcessLinks is right after UniqueProcessId in memory
-  auto const apl_offset = ghv.eprocess_unique_process_id_offset + 8;
-  auto const head = ghv.system_eprocess + apl_offset;
-  auto curr_entry = head;
+  iterate_eprocess_entries(target_pid, [&cpu](uint8_t* process) {
+    // EPROCESS::DirectoryTableBase
+    uint64_t cr3 = 0;
+    if (sizeof(cr3) != read_guest_virtual_memory(ghv.system_cr3,
+      process + ghv.kprocess_directory_table_base_offset, &cr3, sizeof(cr3)))
+      return;
 
-  // iterate over every EPROCESS in the APL linked list
-  do {
-    // get the next entry in the linked list
-    if (sizeof(curr_entry) != read_guest_virtual_memory(ghv.system_cr3,
-        curr_entry + offsetof(LIST_ENTRY, Flink), &curr_entry, sizeof(curr_entry)))
-      break;
-
-    // EPROCESS
-    auto const process = curr_entry - apl_offset;
-
-    // EPROCESS::UniqueProcessId
-    uint64_t pid = 0;
-    if (sizeof(pid) != read_guest_virtual_memory(ghv.system_cr3,
-        process + ghv.eprocess_unique_process_id_offset, &pid, sizeof(pid)))
-      break;
-
-    // we found the target process
-    if (target_pid == pid) {
-      // EPROCESS::DirectoryTableBase
-      uint64_t cr3 = 0;
-      if (sizeof(cr3) != read_guest_virtual_memory(ghv.system_cr3,
-          process + ghv.kprocess_directory_table_base_offset, &cr3, sizeof(cr3)))
-        break;
-
-      cpu->ctx->rax = cr3;
-      break;
-    }
-  } while (curr_entry != head);
+    cpu->ctx->rax = cr3;
+  });
 
   skip_instruction();
 }
@@ -595,6 +603,24 @@ void remove_all_mmrs(vcpu* const cpu) {
   }
 
   vmx_invept(invept_all_context, {});
+  skip_instruction();
+}
+
+void get_process_section_base_address(vcpu* const cpu) {
+  auto const target_pid = cpu->ctx->rcx;
+
+  cpu->ctx->rax = 0;
+
+  iterate_eprocess_entries(target_pid, [&cpu](uint8_t* process) {
+    // EPROCESS::SectionBaseAddress
+    uint64_t section_base_address = 0;
+    if (sizeof(section_base_address) != read_guest_virtual_memory(ghv.system_cr3,
+      process + ghv.eprocess_section_base_address_offset, &section_base_address, sizeof(section_base_address)))
+      return;
+
+    cpu->ctx->rax = section_base_address;
+  });
+
   skip_instruction();
 }
 

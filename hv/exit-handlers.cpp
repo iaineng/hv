@@ -193,24 +193,25 @@ void emulate_vmcall(vcpu* const cpu) {
 
   // handle the hypercall
   switch (code) {
-  case hypercall_ping:                 hc::ping(cpu);                 return;
-  case hypercall_test:                 hc::test(cpu);                 return;
-  case hypercall_unload:               hc::unload(cpu);               return;
-  case hypercall_read_phys_mem:        hc::read_phys_mem(cpu);        return;
-  case hypercall_write_phys_mem:       hc::write_phys_mem(cpu);       return;
-  case hypercall_read_virt_mem:        hc::read_virt_mem(cpu);        return;
-  case hypercall_write_virt_mem:       hc::write_virt_mem(cpu);       return;
-  case hypercall_query_process_cr3:    hc::query_process_cr3(cpu);    return;
-  case hypercall_install_ept_hook:     hc::install_ept_hook(cpu);     return;
-  case hypercall_remove_ept_hook:      hc::remove_ept_hook(cpu);      return;
-  case hypercall_flush_logs:           hc::flush_logs(cpu);           return;
-  case hypercall_get_physical_address: hc::get_physical_address(cpu); return;
-  case hypercall_hide_physical_page:   hc::hide_physical_page(cpu);   return;
-  case hypercall_unhide_physical_page: hc::unhide_physical_page(cpu); return;
-  case hypercall_get_hv_base:          hc::get_hv_base(cpu);          return;
-  case hypercall_install_mmr:          hc::install_mmr(cpu);          return;
-  case hypercall_remove_mmr:           hc::remove_mmr(cpu);           return;
-  case hypercall_remove_all_mmrs:      hc::remove_all_mmrs(cpu);      return;
+  case hypercall_ping:                             hc::ping(cpu);                             return;
+  case hypercall_test:                             hc::test(cpu);                             return;
+  case hypercall_unload:                           hc::unload(cpu);                           return;
+  case hypercall_read_phys_mem:                    hc::read_phys_mem(cpu);                    return;
+  case hypercall_write_phys_mem:                   hc::write_phys_mem(cpu);                   return;
+  case hypercall_read_virt_mem:                    hc::read_virt_mem(cpu);                    return;
+  case hypercall_write_virt_mem:                   hc::write_virt_mem(cpu);                   return;
+  case hypercall_query_process_cr3:                hc::query_process_cr3(cpu);                return;
+  case hypercall_install_ept_hook:                 hc::install_ept_hook(cpu);                 return;
+  case hypercall_remove_ept_hook:                  hc::remove_ept_hook(cpu);                  return;
+  case hypercall_flush_logs:                       hc::flush_logs(cpu);                       return;
+  case hypercall_get_physical_address:             hc::get_physical_address(cpu);             return;
+  case hypercall_hide_physical_page:               hc::hide_physical_page(cpu);               return;
+  case hypercall_unhide_physical_page:             hc::unhide_physical_page(cpu);             return;
+  case hypercall_get_hv_base:                      hc::get_hv_base(cpu);                      return;
+  case hypercall_install_mmr:                      hc::install_mmr(cpu);                      return;
+  case hypercall_remove_mmr:                       hc::remove_mmr(cpu);                       return;
+  case hypercall_remove_all_mmrs:                  hc::remove_all_mmrs(cpu);                  return;
+  case hypercall_get_process_section_base_address: hc::get_process_section_base_address(cpu); return;
   }
 
   HV_LOG_VERBOSE("Unhandled VMCALL. RIP=%p.", vmx_vmread(VMCS_GUEST_RIP));

@@ -46,7 +46,8 @@ enum hypercall_code : uint64_t {
   hypercall_get_hv_base,
   hypercall_install_mmr,
   hypercall_remove_mmr,
-  hypercall_remove_all_mmrs
+  hypercall_remove_all_mmrs,
+  hypercall_get_process_section_base_address
 };
 
 // hypercall input
@@ -126,6 +127,8 @@ void remove_mmr(void* handle);
 
 // remove every installed MMR
 void remove_all_mmrs();
+
+uint64_t get_process_section_base_address(uint64_t pid);
 
 // VMCALL instruction, defined in hv.asm
 uint64_t vmx_vmcall(hypercall_input& input);
@@ -333,6 +336,14 @@ inline void remove_all_mmrs() {
   input.code = hv::hypercall_remove_all_mmrs;
   input.key  = hv::hypercall_key;
   hv::vmx_vmcall(input);
+}
+
+inline uint64_t get_process_section_base_address(uint64_t const pid) {
+  hv::hypercall_input input;
+  input.code = hv::hypercall_get_process_section_base_address;
+  input.key = hv::hypercall_key;
+  input.args[0] = pid;
+  return hv::vmx_vmcall(input);
 }
 
 } // namespace hv
